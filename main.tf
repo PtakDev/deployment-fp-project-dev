@@ -212,5 +212,5 @@ resource "azurerm_linux_virtual_machine" "vm-linux" {
 #     type = "SystemAssigned"
 #   }
 
-  custom_data = filebase64("/vm_scripts/default_config.sh")
+  custom_data = filebase64("./vm_scripts/default_config.sh")
 }
