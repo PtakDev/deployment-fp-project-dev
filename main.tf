@@ -202,7 +202,7 @@ resource "azurerm_network_security_group" "int-nsg" {
 resource "azurerm_network_security_rule" "int-nsr-ftp-ssh" {
   name                        = "allow_ftp_ssh"
   priority                    = 2990
-  direction                   = "Outbound"
+  direction                   = "Inbound"
   access                      = "Allow"
   protocol                    = "Tcp"
   source_port_ranges          = [21, 22]
