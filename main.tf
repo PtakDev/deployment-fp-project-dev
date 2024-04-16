@@ -89,31 +89,30 @@ resource "azurerm_virtual_network" "vnt" {
   }
 }
 
-
-# 6. Subnet and all related resources
-resource "azurerm_subnet" "snt" {
+# 6. Subnet exposed to internet and all related resources
+resource "azurerm_subnet" "web-snt" {
   depends_on = [azurerm_virtual_network.vnt]
   // COMMON
-  name                = join("", [local.vnt_name, "-snt", var.subnet_config.snt_number])
+  name                = join("", [local.vnt_name, "-snt", var.web_subnet_config.snt_number])
   resource_group_name = azurerm_resource_group.rsg.name
   // SNT CONFIG
   virtual_network_name = azurerm_virtual_network.vnt.name
-  address_prefixes     = var.subnet_config.snt_address_prefixes
+  address_prefixes     = var.web_subnet_config.snt_address_prefixes
 }
 
-resource "azurerm_network_security_group" "nsg" {
-  depends_on          = [azurerm_subnet.snt]
-  name                = join("", [local.vnt_name, "-nsg", var.subnet_config.snt_number])
+resource "azurerm_network_security_group" "web-nsg" {
+  depends_on          = [azurerm_subnet.web-snt]
+  name                = join("", [local.vnt_name, "-nsg", var.web_subnet_config.snt_number])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
 
   security_rule {
-    name                       = "default-rule"
+    name                       = "allow_https"
     priority                   = 2990
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
-    source_port_range          = "*"
+    source_port_ranges          = [443]
     destination_port_range     = "*"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
@@ -124,15 +123,15 @@ resource "azurerm_network_security_group" "nsg" {
   }
 }
 
-resource "azurerm_subnet_network_security_group_association" "nsg-association" {
-  depends_on                = [azurerm_network_security_group.nsg]
-  subnet_id                 = azurerm_subnet.snt.id
-  network_security_group_id = azurerm_network_security_group.nsg.id
+resource "azurerm_subnet_network_security_group_association" "web-nsg-association" {
+  depends_on                = [azurerm_network_security_group.web-nsg]
+  subnet_id                 = azurerm_subnet.web-snt.id
+  network_security_group_id = azurerm_network_security_group.web-nsg.id
 }
 
-resource "azurerm_route_table" "rtb" {
-  depends_on          = [azurerm_subnet.snt]
-  name                = join("", [local.vnt_name, "-rtb", var.subnet_config.snt_number])
+resource "azurerm_route_table" "web-rtb" {
+  depends_on          = [azurerm_subnet.web-snt]
+  name                = join("", [local.vnt_name, "-rtb", var.web_subnet_config.snt_number])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
   // TAGGING
@@ -141,15 +140,14 @@ resource "azurerm_route_table" "rtb" {
   }
 }
 
-resource "azurerm_subnet_route_table_association" "rtb-association" {
-  depends_on     = [azurerm_route_table.rtb]
-  subnet_id      = azurerm_subnet.snt.id
-  route_table_id = azurerm_route_table.rtb.id
-
+resource "azurerm_subnet_route_table_association" "web-rtb-association" {
+  depends_on     = [azurerm_route_table.web-rtb]
+  subnet_id      = azurerm_subnet.web-snt.id
+  route_table_id = azurerm_route_table.web-rtb.id
 }
 
 # 7. Public IP
-resource "azurerm_public_ip" "pip" {
+resource "azurerm_public_ip" "web-pip" {
   name                = join("", [local.vm_name, "-pip", var.public_ip_config.pip_number])
   resource_group_name = azurerm_resource_group.rsg.name
   location            = var.location
@@ -161,7 +159,7 @@ resource "azurerm_public_ip" "pip" {
 }
 
 # 8. Network Interface
-resource "azurerm_network_interface" "nic" {
+resource "azurerm_network_interface" "web-nic" {
   depends_on          = [azurerm_public_ip.pip]
   name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
   location            = var.location
@@ -169,15 +167,107 @@ resource "azurerm_network_interface" "nic" {
 
   ip_configuration {
     name                          = "External"
-    subnet_id                     = azurerm_subnet.snt.id
+    subnet_id                     = azurerm_subnet.web-snt.id
     private_ip_address_allocation = "Static"
-    public_ip_address_id          = azurerm_public_ip.pip.id
-    private_ip_address            = cidrhost(var.subnet_config.snt_address_prefixes[0], 5)
+    public_ip_address_id          = azurerm_public_ip.web-pip.id
+    private_ip_address            = cidrhost(var.web_subnet_config.snt_address_prefixes[0], 5)
   }
 }
 
+
+#### Internal comunication infraestructure
+# 6. Subnet exposed to internet and all related resources
+resource "azurerm_subnet" "int-snt" {
+  depends_on = [azurerm_virtual_network.vnt]
+  // COMMON
+  name                = join("", [local.vnt_name, "-snt", var.int_subnet_config.snt_number])
+  resource_group_name = azurerm_resource_group.rsg.name
+  // SNT CONFIG
+  virtual_network_name = azurerm_virtual_network.vnt.name
+  address_prefixes     = var.int_subnet_config.snt_address_prefixes
+}
+
+resource "azurerm_network_security_group" "int-nsg" {
+  depends_on          = [azurerm_subnet.int-snt]
+  name                = join("", [local.vnt_name, "-nsg", var.int_subnet_config.snt_number])
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rsg.name
+
+  security_rule {
+    name                       = "allow_ftp_ssh"
+    priority                   = 2990
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_ranges          = [21, 22]
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+  // TAGGING
+  tags = {
+    environment = var.env_tag
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "int-nsg-association" {
+  depends_on                = [azurerm_network_security_group.int-nsg]
+  subnet_id                 = azurerm_subnet.int-snt.id
+  network_security_group_id = azurerm_network_security_group.int-nsg.id
+}
+
+resource "azurerm_route_table" "int-rtb" {
+  depends_on          = [azurerm_subnet.int-snt]
+  name                = join("", [local.vnt_name, "-rtb", var.int_subnet_config.snt_number])
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rsg.name
+  // TAGGING
+  tags = {
+    environment = var.env_tag
+  }
+}
+
+resource "azurerm_subnet_route_table_association" "int-rtb-association" {
+  depends_on     = [azurerm_route_table.int-rtb]
+  subnet_id      = azurerm_subnet.int-snt.id
+  route_table_id = azurerm_route_table.int-rtb.id
+}
+
+# 7. Public IP
+resource "azurerm_public_ip" "int-pip" {
+  name                = join("", [local.vm_name, "-pip02"])
+  resource_group_name = azurerm_resource_group.rsg.name
+  location            = var.location
+  allocation_method   = var.public_ip_config.allocation_method
+  // TAGGING
+  tags = {
+    environment = var.env_tag
+  }
+}
+
+# 8. Network Interface
+resource "azurerm_network_interface" "int-nic" {
+  depends_on          = [azurerm_public_ip.pip]
+  name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rsg.name
+
+  ip_configuration {
+    name                          = "External"
+    subnet_id                     = azurerm_subnet.int-snt.id
+    private_ip_address_allocation = "Static"
+    public_ip_address_id          = azurerm_public_ip.int-pip.id
+    private_ip_address            = cidrhost(var.int_subnet_config.snt_address_prefixes[0], 5)
+  }
+}
+
+
 resource "azurerm_linux_virtual_machine" "vm-linux" {
-  depends_on          = [azurerm_network_interface.nic]
+  depends_on          = [
+    azurerm_network_interface.web-nic, 
+    azurerm_network_interface.int-nic
+  ]
+
   name                = local.vm_name
   resource_group_name = azurerm_resource_group.rsg.name
   location            = var.location
@@ -188,7 +278,8 @@ resource "azurerm_linux_virtual_machine" "vm-linux" {
   disable_password_authentication = false
 
   network_interface_ids = [
-    azurerm_network_interface.nic.id,
+    azurerm_network_interface.web-nic.id,
+    azurerm_network_interface.int-nic.id,
   ]
 
   # admin_ssh_key {

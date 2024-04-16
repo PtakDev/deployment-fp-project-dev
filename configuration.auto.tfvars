@@ -20,9 +20,14 @@ log_analytics_workspace_config = {
 
 vnt_address_space = ["192.168.200.0/24"]
 
-subnet_config = {
+web_subnet_config = {
   snt_number           = "01"
   snt_address_prefixes = ["192.168.200.0/25"]
+}
+
+int_subnet_config = {
+  snt_number           = "02"
+  snt_address_prefixes = ["192.168.200.128/25"]
 }
 
 public_ip_config = {

@@ -93,7 +93,12 @@ variable "vnt_address_space" {
   description = "(Required) The address space that is used the virtual network."
 }
 
-variable "subnet_config" {
+variable "web_subnet_config" {
+  type        = any
+  description = "(Required) Subnet configuration for virtual network."
+}
+
+variable "int_subnet_config" {
   type        = any
   description = "(Required) Subnet configuration for virtual network."
 }
