@@ -160,7 +160,7 @@ resource "azurerm_public_ip" "web-pip" {
 
 # 8. Network Interface
 resource "azurerm_network_interface" "web-nic" {
-  depends_on          = [azurerm_public_ip.pip]
+  depends_on          = [azurerm_public_ip.web-pip]
   name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
@@ -247,7 +247,7 @@ resource "azurerm_public_ip" "int-pip" {
 
 # 8. Network Interface
 resource "azurerm_network_interface" "int-nic" {
-  depends_on          = [azurerm_public_ip.pip]
+  depends_on          = [azurerm_public_ip.int-pip]
   name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
