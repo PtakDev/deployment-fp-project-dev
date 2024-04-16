@@ -148,7 +148,7 @@ resource "azurerm_subnet_route_table_association" "web-rtb-association" {
 
 # 7. Public IP
 resource "azurerm_public_ip" "web-pip" {
-  name                = join("", [local.vm_name, "-pip", var.public_ip_config.pip_number])
+  name                = join("", [local.vm_name, "-pip01"])
   resource_group_name = azurerm_resource_group.rsg.name
   location            = var.location
   allocation_method   = var.public_ip_config.allocation_method
@@ -161,7 +161,7 @@ resource "azurerm_public_ip" "web-pip" {
 # 8. Network Interface
 resource "azurerm_network_interface" "web-nic" {
   depends_on          = [azurerm_public_ip.web-pip]
-  name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
+  name                = join("", [local.vm_name, "-nic01"])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
 
@@ -248,7 +248,7 @@ resource "azurerm_public_ip" "int-pip" {
 # 8. Network Interface
 resource "azurerm_network_interface" "int-nic" {
   depends_on          = [azurerm_public_ip.int-pip]
-  name                = join("", [local.vm_name, "-nic", var.public_ip_config.pip_number])
+  name                = join("", [local.vm_name, "-nic02"])
   location            = var.location
   resource_group_name = azurerm_resource_group.rsg.name
 
