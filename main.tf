@@ -187,35 +187,38 @@ resource "azurerm_subnet" "int-snt" {
   address_prefixes     = var.int_subnet_config.snt_address_prefixes
 }
 
-# resource "azurerm_network_security_group" "int-nsg" {
-#   depends_on          = [azurerm_subnet.int-snt]
-#   name                = join("", [local.vnt_name, "-nsg", var.int_subnet_config.snt_number])
-#   location            = var.location
-#   resource_group_name = azurerm_resource_group.rsg.name
+resource "azurerm_network_security_group" "int-nsg" {
+  depends_on          = [azurerm_subnet.int-snt]
+  name                = join("", [local.vnt_name, "-nsg", var.int_subnet_config.snt_number])
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rsg.name
 
-#   security_rule {
-#     name                       = "allow_ftp_ssh"
-#     priority                   = 2990
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = null
-#     source_port_ranges         = [21, 22]
-#     destination_port_range     = "*"
-#     source_address_prefix      = "*"
-#     destination_address_prefix = "*"
-#   }
-#   // TAGGING
-#   tags = {
-#     environment = var.env_tag
-#   }
-# }
+  // TAGGING
+  tags = {
+    environment = var.env_tag
+  }
+}
 
-# resource "azurerm_subnet_network_security_group_association" "int-nsg-association" {
-#   depends_on                = [azurerm_network_security_group.int-nsg]
-#   subnet_id                 = azurerm_subnet.int-snt.id
-#   network_security_group_id = azurerm_network_security_group.int-nsg.id
-# }
+resource "azurerm_network_security_rule" "int-nsr-ftp-ssh" {
+  name                        = "allow_ftp_ssh"
+  priority                    = 2990
+  direction                   = "Outbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_ranges          = [21, 22]
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.rsg.name
+  network_security_group_name = azurerm_network_security_group.int-nsg.name
+}
+
+
+resource "azurerm_subnet_network_security_group_association" "int-nsg-association" {
+  depends_on                = [azurerm_network_security_group.int-nsg]
+  subnet_id                 = azurerm_subnet.int-snt.id
+  network_security_group_id = azurerm_network_security_group.int-nsg.id
+}
 
 resource "azurerm_route_table" "int-rtb" {
   depends_on          = [azurerm_subnet.int-snt]
