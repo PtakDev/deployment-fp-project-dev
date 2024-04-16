@@ -211,11 +211,11 @@ resource "azurerm_subnet" "int-snt" {
 #   }
 # }
 
-resource "azurerm_subnet_network_security_group_association" "int-nsg-association" {
-  depends_on                = [azurerm_network_security_group.int-nsg]
-  subnet_id                 = azurerm_subnet.int-snt.id
-  network_security_group_id = azurerm_network_security_group.int-nsg.id
-}
+# resource "azurerm_subnet_network_security_group_association" "int-nsg-association" {
+#   depends_on                = [azurerm_network_security_group.int-nsg]
+#   subnet_id                 = azurerm_subnet.int-snt.id
+#   network_security_group_id = azurerm_network_security_group.int-nsg.id
+# }
 
 resource "azurerm_route_table" "int-rtb" {
   depends_on          = [azurerm_subnet.int-snt]
